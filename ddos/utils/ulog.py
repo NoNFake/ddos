@@ -45,12 +45,15 @@ handler.setFormatter(ColoredFormater())
 
 logging.basicConfig(
     level=logging.INFO,
-    handlers=[handler],)
+    handlers=[handler],
+    )
 
 global log
 # LOGGER 
 log = logging.getLogger(__name__)
 log.critical("Logging system: log.info... / log_on / log_off")
+
+
 # log  = lambda args : logger.info(args)
 
 def log_off(): log = logging.disable()
