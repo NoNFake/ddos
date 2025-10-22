@@ -19,8 +19,8 @@ import uvloop
 from aiohttp import ClientSession, TCPConnector
 from rich import traceback
 
-from headres import getHeaders
-from utils.ulog import log, log_off, log_on
+from .src.headres import getHeaders
+from .utils.ulog import log, log_off, log_on
 
 
 
@@ -71,8 +71,6 @@ class CPUManager:
 
 
 class HTTPFlooder:
-
-
     def __init__(
             self,
             target_url: str,
@@ -343,5 +341,3 @@ def main() -> None:
         sys.exit(1) 
 
 
-if __name__ == "__main__":
-    main()   
