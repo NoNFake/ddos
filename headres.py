@@ -19,7 +19,7 @@ def getHeaders(url: str)-> dict:
         'Sec-Fetch-Site': 'same-origin',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Dest': 'empty',
-        'Referer': url + '/login',
+        'Referer': url,
         'Accept-Encoding': 'gzip, deflate, br',
         'Priority': 'u=1, i',
     }
