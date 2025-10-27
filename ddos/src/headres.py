@@ -1,4 +1,6 @@
 import ua_generator
+import random 
+
 
 def getHeaders(url: str)-> dict:
     ua = ua_generator.generate(
@@ -8,6 +10,7 @@ def getHeaders(url: str)-> dict:
     )
     ua.headers.accept_ch('Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List')
 
+    r =  random._urandom(1024*1024).hex()
 
     header ={
         'Host': url.replace('https://', '').replace('https://', '').split('/')[0],
@@ -22,6 +25,7 @@ def getHeaders(url: str)-> dict:
         'Referer': url,
         'Accept-Encoding': 'gzip, deflate, br',
         'Priority': 'u=1, i',
+        # 'User-Agent': r
     }
     header.update(ua.headers.get())
     return header

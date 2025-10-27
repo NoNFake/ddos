@@ -37,8 +37,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="Concurrent requests per worker (default: 50)"
     )
     
-    return parser
 
+    parser.add_argument(
+            "-m", "--method",
+            type=str,
+            default='post',
+            help="HTTP method to use (default: post) post/get"
+        )
+        
+    return parser
 
 def validate_arguments(args: argparse.Namespace) -> bool:
     """Validate command line arguments"""

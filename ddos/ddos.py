@@ -45,7 +45,8 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 def worker_process(
         target_url: str,
         concurrency: int,
-        sleep_time: float
+        sleep_time: float,
+        method: str
 ) -> None:
     try:
         if platform.system().lower() == "linux":
@@ -57,7 +58,9 @@ def worker_process(
             run_http_flood(
                 target_url,
                 concurrency,
-                sleep_time
+                sleep_time,
+                method=method
+
             )
         )
 
@@ -83,8 +86,9 @@ def main() -> None:
     - Concurrency per process: {args.concurrency}
     - Sleep time: {args.sleep_time}s
     - Total workers: {args.thread_count * args.concurrency}
+    - Method: {args.method}
     """)
-
+    time.sleep(2)
     processes = []
 
     try:
@@ -94,7 +98,8 @@ def main() -> None:
                 args=(
                     args.target_url,
                     args.concurrency,
-                    args.sleep_time
+                    args.sleep_time,
+                    args.method
                 ),
                 name=f"flood_worker_{i}"
             )

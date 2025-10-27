@@ -19,7 +19,7 @@ menu = f"""
 
 
 [u] update
-
+[s] start
 """
 
 
@@ -35,9 +35,17 @@ def main():
     if choose == "u":
         # ddos.update_tool()
         os.system("git pull && uv run -m ddos")
+    if choose == "n":
+        sleep_time = input("sleep_time: ")
+        print(f"Sleep time set to: {sleep_time}")
+    if choose == "tr":
+        thread_count = input("thread_count: ")
+        print(f"Thread count set to: {thread_count}")
 
+    if choose == "s":
+        ddos.main()
 
 
 if __name__ == "__main__":
-    # ddos.main()   
-    main()
+    ddos.main()   
+    # main()
