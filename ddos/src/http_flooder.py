@@ -87,7 +87,8 @@ class HTTPFlooder:
                         raise RuntimeError("HTTP session is not initialized.")      
                     
 
-                    # log.warning(f"Method: {self.method.upper()}")
+                    log.warning(f"Method: {self.method.upper()}")
+                    time.sleep(5)
                     if self.method == 'get':
                         async with self.session.get(
                             self.target_url
