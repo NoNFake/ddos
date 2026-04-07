@@ -88,11 +88,12 @@ def validate_arguments(args: argparse.Namespace) -> bool:
     
     if args.target_ip:
         try:
-            socket.inet_aton(args.target_ip)
-        except socket.error:
-            print("Error: Invalid target IP address")
+            socket.getaddrinfo(args.target_ip, None)
+        except socket.gaierror:
+            print(f"Error: Invalid target IP address or domain: {args.target_ip}")
             return False
         
+
     if args.thread_count <= 0:
         print("Error: Thread count must be positive")
         return False
