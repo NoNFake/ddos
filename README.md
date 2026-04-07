@@ -1,4 +1,3 @@
-опиши что делает проект и как его использовать
 
 # DDoS Attack Simulation Tool
 This project is a DDoS (Distributed Denial of Service) attack simulation tool designed to test the resilience of web servers against HTTP flood attacks. It allows users to generate a high volume of HTTP requests to a target server, simulating the effects of a DDoS attack.
