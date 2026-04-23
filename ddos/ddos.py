@@ -32,7 +32,6 @@ from .src.http_flooder import run_http_flood
 from .src.port_scanner import PortScanner
 
  
-
 traceback.install()
 
 
@@ -239,8 +238,12 @@ def main() -> None:
     - Total workers: {args.thread_count * args.concurrency}
     - Method: {args.method}
     """)
-    time.sleep(2)
+    # time.sleep(2)
 
+    choice = input("> start script? (y/n): ").lower().strip()
+
+    if choice not in ['y', 'yes']:
+        return
 
     try:
         for i in range(args.thread_count):
