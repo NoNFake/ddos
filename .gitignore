@@ -1,3 +1,4 @@
-__pycache__/
 .venv/
-ddos/__pycache__/
+ddos/__pycache__/*
+__pycache__/
+*.pyc
