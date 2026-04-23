@@ -10,7 +10,7 @@ def getHeaders(url: str)-> dict:
     )
     ua.headers.accept_ch('Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List')
 
-    r =  random._urandom(1024*1024).hex()
+    # r =  random.urandom(1024*1024).hex()
 
     header ={
         'Host': url.replace('https://', '').replace('https://', '').split('/')[0],
