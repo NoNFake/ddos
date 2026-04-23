@@ -2,3 +2,6 @@
 ddos/__pycache__/*
 __pycache__/
 *.pyc
+
+main.py
+test.py
